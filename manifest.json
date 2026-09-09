@@ -1,0 +1,16 @@
+{
+  "name": "NEXUS OS",
+  "short_name": "NEXUS",
+  "description": "Neural EXtension for Unified Studies",
+  "start_url": "/nexus-os/",
+  "display": "standalone",
+  "background_color": "#0a0000",
+  "theme_color": "#0a0000",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23ff1a1a'/%3E%3Ctext x='50' y='68' font-size='60' font-weight='bold' text-anchor='middle' fill='%230a0000'%3EN%3C/text%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
