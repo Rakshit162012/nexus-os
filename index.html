@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS OS</title>
+  <meta name="theme-color" content="#0a0000">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'nx-bg': '#0a0000',
+            'nx-surface': '#140202',
+            'nx-elevated': '#1f0505',
+            'nx-input': '#0f0101',
+            'nx-red': '#ff1a1a',
+            'nx-red-dim': '#b30000',
+            'nx-cyan': '#00f0ff',
+            'nx-purple': '#bd00ff',
+            'nx-green': '#00ff88',
+            'nx-amber': '#ffaa00',
+            'nx-text': '#f0e6e6',
+            'nx-text-sec': '#a08080',
+            'nx-text-muted': '#5c4040',
+          },
+          fontFamily: {
+            'sans': ['"Segoe UI"', 'system-ui', 'sans-serif'],
+            'mono': ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+          },
+          animation: {
+            'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'shimmer': 'shimmer 2s linear infinite',
+            'fade-in-up': 'fadeInUp 0.25s ease-out',
+          },
+          keyframes: {
+            pulseGlow: {
+              '0%, 100%': { boxShadow: '0 0 8px rgba(255,26,26,0.4)' },
+              '50%': { boxShadow: '0 0 22px rgba(255,26,26,0.7)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            },
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(8px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+<body class="bg-nx-bg text-nx-text font-sans min-h-screen">
+  <div id="app">
+    <!-- Views render here -->
+    <div id="view" class="animate-fade-in-up"></div>
+
+    <!-- Loading overlay -->
+    <div id="loader" class="hidden fixed inset-0 bg-nx-bg/90 z-50 flex items-center justify-center">
+      <div class="text-center">
+        <div class="w-12 h-12 border-2 border-nx-red border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <div class="text-nx-red font-mono text-sm tracking-widest" id="loader-text">PROCESSING</div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg font-mono text-sm border"></div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
