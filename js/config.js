@@ -6,7 +6,7 @@
 
 (function () {
   const BACKEND_URL = "https://nexus-os-backend-445137667521.europe-west1.run.app";
-  const SUPABASE_URL = "https://yptgmzbpzeetthgxqmga.supabase.co";
+  const SUPABASE_URL = "https://dgsiaxrwwqugedlsfxno.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnc2lheHJ3d3F1Z2VkbHNmeG5vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NzQxNjAsImV4cCI6MjEwNDE1MDE2MH0.vrZ9csldDptljSD6gOEvDPqwKK31JQvwdDgCbU1gqw8";
 
   window.APP_CONFIG = {
