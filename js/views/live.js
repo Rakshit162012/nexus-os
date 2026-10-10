@@ -19,7 +19,10 @@ export async function renderLive(container) {
       <h1 class="text-2xl font-bold tracking-tight">SOCRATES <span class="text-nx-red">LIVE</span></h1>
       <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
     </div>
-
+    ${navigator.userAgent.includes("Firefox") ? `
+    <div class="nx-card p-3 mb-5 w-full max-w-md text-center" style="border-color:rgba(255,170,0,0.4)">
+      <div class="text-nx-amber text-xs font-mono">⚠ Firefox détecté — le mode voix peut grésiller.<br>Utilise <b>Chrome</b> pour une voix parfaite (le chat texte marche partout).</div>
+    </div>` : ""}
         <!-- One-time key entry (stored only in YOUR browser) -->
     <div id="key-gate" class="nx-card p-5 mb-6 w-full max-w-md ${APP_CONFIG.LIVE_KEY ? "hidden" : ""}">
       <div class="font-mono text-xs tracking-widest text-nx-amber mb-2">🔑 LIVE API KEY REQUIRED</div>
