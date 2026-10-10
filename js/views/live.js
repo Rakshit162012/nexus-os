@@ -5,6 +5,7 @@
 
 let session = null;
 let connected = false;
+let connecting = false;
 let micStream = null, micCtx = null, processor = null;
 let outCtx = null, nextPlayTime = 0, activeSources = [];
 let aiBubbleEl = null, userBubbleEl = null;
@@ -83,6 +84,8 @@ function isMobileDevice() {
 /* ---------- connection ---------- */
 
 async function connect() {
+  if (connecting || connected) return;
+  connecting = true;
   const key = localStorage.getItem("nexus_live_key") || "";
   if (!key) {
     document.getElementById("key-gate")?.classList.remove("hidden");
@@ -117,7 +120,8 @@ async function connect() {
       callbacks: {
         onmessage: onLiveMessage,
         onerror: (e) => setStatus("ERROR: " + (e?.message || JSON.stringify(e)).slice(0, 80)),
-                onclose: (e) => {
+                        onclose: (e) => {
+          connecting = false;
           if (connected) disconnect(true);
           setStatus("CLOSED code=" + (e?.code ?? "?") + " reason=" + (e?.reason || "none").slice(0, 60));
         },
@@ -134,10 +138,11 @@ async function connect() {
       setOrb(true);
       setStatus("● LIVE — parle librement · clique pour couper");
     }
-  } catch (e) {
+    } catch (e) {
     setStatus("CONNEXION ÉCHOUÉE: " + e.message);
     toast("Live: " + e.message, "error", 5000);
   }
+  connecting = false;
 }
 
 async function startMic() {
