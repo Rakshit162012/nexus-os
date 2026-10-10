@@ -60,4 +60,44 @@
     el.classList.remove("hidden");
     setTimeout(() => el.classList.add("hidden"), duration);
   };
+    // Voice recording (Firefox-safe) → backend → Groq Whisper
+  window.recordVoice = function (onResult) {
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      toast("Micro non supporté sur ce navigateur", "error", 4000);
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/ogg;codecs=opus") ? "audio/ogg;codecs=opus" : "";
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const chunks = [];
+      rec.ondataavailable = (e) => chunks.push(e.data);
+      document.querySelectorAll(".nx-fab, #voice-btn").forEach((b) => b.classList.add("recording"));
+      toast("🎤 Enregistrement... clique n'importe où pour arrêter", "info", 3000);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        document.querySelectorAll(".nx-fab, #voice-btn").forEach((b) => b.classList.remove("recording"));
+        showLoader("TRANSCRIPTION");
+        try {
+          const blob = new Blob(chunks, { type: mime || "audio/webm" });
+          const fd = new FormData();
+          fd.append("file", blob, "voice.webm");
+          const res = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/transcribe", { method: "POST", body: fd });
+          if (!res.ok) throw new Error("Transcription " + res.status);
+          const data = await res.json();
+          if (data.text) onResult(data.text);
+          else toast("Rien entendu — réessaie", "error");
+        } catch (e) {
+          toast("Erreur: " + e.message, "error");
+        } finally {
+          hideLoader();
+        }
+      };
+      rec.start();
+      setTimeout(() => {
+        const stopHandler = () => { if (rec.state === "recording") rec.stop(); document.removeEventListener("click", stopHandler); };
+        document.addEventListener("click", stopHandler);
+      }, 400);
+    }).catch(() => toast("Accès micro refusé — autorise le micro dans Firefox", "error", 4000));
+  };
 })();
