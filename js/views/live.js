@@ -20,9 +20,9 @@ export async function renderLive(container) {
 
     <div class="text-center mb-6">
       <h1 class="text-2xl font-bold tracking-tight">SOCRATES <span class="text-nx-red">LIVE</span></h1>
-      <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
+            <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
+      <button id="change-key" class="nx-btn nx-btn-ghost mt-2" style="padding:0.3rem 0.8rem;font-size:0.65rem">🔑 CHANGE KEY</button>
     </div>
-
     ${navigator.userAgent.includes("Firefox") && !isMobileDevice() ? `
     <div class="nx-card p-3 mb-5 w-full max-w-md text-center" style="border-color:rgba(255,170,0,0.4)">
       <div class="text-nx-amber text-xs font-mono">⚠ Firefox détecté — le mode voix peut grésiller.<br>Utilise <b>Chrome</b> pour une voix parfaite (le chat texte marche partout).</div>
@@ -59,9 +59,14 @@ export async function renderLive(container) {
     if (v.length < 20) { toast("Clé trop courte", "error"); return; }
     localStorage.setItem("nexus_live_key", v);
     document.getElementById("key-gate").classList.add("hidden");
-    toast("Clé sauvegardée dans ce navigateur", "success");
+    toast("Clé sauvegardée · se termine par …" + v.slice(-6), "success");
   });
 
+    document.getElementById("change-key")?.addEventListener("click", () => {
+    document.getElementById("key-gate").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  });
+  
   const orb = document.getElementById("live-orb");
   if (isMobileDevice()) {
     orb.addEventListener("touchstart", startMobileRecord);
