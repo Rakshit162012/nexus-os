@@ -118,21 +118,39 @@ async function connect() {
 
 async function startMic() {
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  micCtx = new AudioContext({ sampleRate: 16000 });
+  micCtx = new AudioContext(); // native device rate — phones ignore {sampleRate}
+  micCtx.resume();
   const src = micCtx.createMediaStreamSource(micStream);
   processor = micCtx.createScriptProcessor(4096, 1, 1);
   const mute = micCtx.createGain();
-  mute.gain.value = 0; // prevent mic playback echo
+  mute.gain.value = 0;
   src.connect(processor);
   processor.connect(mute);
   mute.connect(micCtx.destination);
   processor.onaudioprocess = (e) => {
     if (!connected || !session) return;
-    const pcm = floatTo16(e.inputBuffer.getChannelData(0));
+    const raw = e.inputBuffer.getChannelData(0);
+    const pcm16 = downsampleTo16k(raw, micCtx.sampleRate);
     session.sendRealtimeInput({
-      audio: { data: toBase64(pcm), mimeType: "audio/pcm;rate=16000" },
+      audio: { data: toBase64(pcm16), mimeType: "audio/pcm;rate=16000" },
     });
   };
+}
+
+function downsampleTo16k(f32, inRate) {
+  if (inRate === 16000) return floatTo16(f32);
+  const ratio = inRate / 16000;
+  const outLen = Math.floor(f32.length / ratio);
+  const out = new Int16Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const idx = i * ratio;
+    const i0 = Math.floor(idx);
+    const i1 = Math.min(i0 + 1, f32.length - 1);
+    const frac = idx - i0;
+    const s = f32[i0] * (1 - frac) + f32[i1] * frac;
+    out[i] = Math.max(-1, Math.min(1, s)) * 32767;
+  }
+  return out;
 }
 
 function disconnect(silent) {
