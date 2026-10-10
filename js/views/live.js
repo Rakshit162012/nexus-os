@@ -20,6 +20,14 @@ export async function renderLive(container) {
       <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
     </div>
 
+        <!-- One-time key entry (stored only in YOUR browser) -->
+    <div id="key-gate" class="nx-card p-5 mb-6 w-full max-w-md ${APP_CONFIG.LIVE_KEY ? "hidden" : ""}">
+      <div class="font-mono text-xs tracking-widest text-nx-amber mb-2">🔑 LIVE API KEY REQUIRED</div>
+      <div class="text-nx-text-muted text-xs mb-3">Paste your Gemini Live key once — it stays in this browser only, never in the code.</div>
+      <input id="live-key-input" type="password" class="nx-input mb-2" placeholder="AQ....">
+      <button id="save-key-btn" class="nx-btn nx-btn-primary w-full">SAVE KEY</button>
+    </div>
+
     <!-- Voice picker -->
     <select id="live-voice" class="nx-input mb-8" style="width:auto;padding:0.4rem 0.9rem;font-size:0.8rem">
       ${["Puck","Charon","Kore","Fenrir","Aoede","Leda","Orus"].map(v =>
@@ -39,6 +47,15 @@ export async function renderLive(container) {
     <div id="live-transcript" class="w-full space-y-4"></div>
   </div>`;
 
+  document.getElementById("save-key-btn")?.addEventListener("click", () => {
+    const v = document.getElementById("live-key-input").value.trim();
+    if (v.length < 20) { toast("Clé trop courte", "error"); return; }
+    localStorage.setItem("nexus_live_key", v);
+    APP_CONFIG.LIVE_KEY = v;
+    document.getElementById("key-gate").classList.add("hidden");
+    toast("Clé sauvegardée dans ce navigateur", "success");
+  });
+  
   document.getElementById("live-orb").addEventListener("click", () => {
     connected ? disconnect() : connect();
   });
@@ -48,11 +65,17 @@ export async function renderLive(container) {
 /* ---------- connection ---------- */
 
 async function connect() {
+    const key = localStorage.getItem("nexus_live_key") || APP_CONFIG.LIVE_KEY;
+  if (!key) {
+    document.getElementById("key-gate")?.classList.remove("hidden");
+    setStatus("ENTRE TA CLÉ LIVE D'ABORD");
+    return;
+  }
   const voice = document.getElementById("live-voice").value;
   setStatus("CONNECTING…");
   try {
     const { GoogleGenAI, Modality } = await import("https://esm.run/@google/genai@1.16.0");
-    const ai = new GoogleGenAI({ apiKey: APP_CONFIG.LIVE_KEY });
+    const ai = new GoogleGenAI({ apiKey: key });
 
     session = await ai.live.connect({
       model: APP_CONFIG.LIVE_MODEL,
