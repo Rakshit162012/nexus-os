@@ -60,9 +60,16 @@ export async function renderLive(container) {
     toast("Clé sauvegardée dans ce navigateur", "success");
   });
   
-  document.getElementById("live-orb").addEventListener("click", () => {
-    connected ? disconnect() : connect();
-  });
+    const orb = document.getElementById("live-orb");
+  if (isMobileDevice()) {
+    orb.addEventListener("touchstart", startMobileRecord);
+    orb.addEventListener("touchend", stopMobileRecord);
+    orb.addEventListener("mousedown", startMobileRecord);
+    orb.addEventListener("mouseup", stopMobileRecord);
+    setStatus("Tap orb to connect · then HOLD orb while talking");
+  } else {
+    orb.addEventListener("click", () => { connected ? disconnect() : connect(); });
+  }
   window.addEventListener("hashchange", () => { if (connected) disconnect(); });
 }
 
@@ -106,15 +113,7 @@ async function connect() {
       },
     });
 
-    await startMic();
-    connected = true;
-    setOrb(true);
-    setStatus("● LIVE — parle librement · clique pour couper");
-  } catch (e) {
-    setStatus("CONNEXION ÉCHOUÉE: " + e.message);
-    toast("Live: " + e.message, "error", 5000);
-  }
-}
+     if (isMobileDevice()) { connected = true; setOrb(true); setStatus("● LIVE — MAINTIENS l'orb pour parler"); } else { await startMic(); connected = true; setOrb(true); setStatus("● LIVE — parle librement · clique pour couper"); }
 
 async function startMic() {
   micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -283,13 +282,16 @@ function makeBubble(role) {
 }
 
 function setOrb(on) {
-  const orb = document.getElementById("live-orb");
-  document.getElementById("orb-label").textContent = on ? "LIVE" : "CONNECT";
-  orb.style.boxShadow = on
-    ? "0 0 60px rgba(255,26,26,0.8), 0 0 120px rgba(255,26,26,0.4)"
-    : "0 0 40px rgba(255,26,26,0.4)";
-  orb.style.animation = on ? "pulseGlow 1.5s infinite" : "none";
-}
+    const orb = document.getElementById("live-orb");
+  if (isMobileDevice()) {
+    orb.addEventListener("touchstart", startMobileRecord);
+    orb.addEventListener("touchend", stopMobileRecord);
+    orb.addEventListener("mousedown", startMobileRecord);
+    orb.addEventListener("mouseup", stopMobileRecord);
+    setStatus("Tap orb to connect · then HOLD orb while talking");
+  } else {
+    orb.addEventListener("click", () => { connected ? disconnect() : connect(); });
+  }
 
 function setStatus(t) {
   const el = document.getElementById("live-status");
@@ -299,4 +301,47 @@ function setStatus(t) {
 function scrollDown() {
   const box = document.getElementById("live-transcript");
   if (box) box.scrollTop = box.scrollHeight;
+}
+
+  let mobRec = null, mobChunks = [];
+
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+async function startMobileRecord(e) {
+  e.preventDefault();
+  if (!connected) { connect(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mobRec = new MediaRecorder(stream);
+    mobChunks = [];
+    mobRec.ondataavailable = (ev) => mobChunks.push(ev.data);
+    mobRec.start();
+    document.getElementById("live-orb").style.transform = "scale(1.15)";
+    setStatus("● ENREGISTREMENT… relâche pour envoyer");
+  } catch (err) { setStatus("MIC: " + err.message); }
+}
+
+async function stopMobileRecord() {
+  if (!mobRec || mobRec.state !== "recording") return;
+  document.getElementById("live-orb").style.transform = "";
+  mobRec.onstop = async () => {
+    mobRec.stream.getTracks().forEach((t) => t.stop());
+    setStatus("TRANSCRIPTION…");
+    try {
+      const blob = new Blob(mobChunks, { type: mobRec.mimeType || "audio/webm" });
+      const fd = new FormData();
+      fd.append("file", blob, "voice.webm");
+      const res = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/transcribe",
+        { method: "POST", body: fd });
+      const data = await res.json();
+      if (!data.text) { setStatus("Rien entendu — réessaie"); mobRec = null; return; }
+      makeBubble("user").textContent = data.text;
+      session.send({ text: data.text });
+      setStatus("● LIVE — Socrates répond…");
+    } catch (err) { setStatus("ERREUR: " + err.message); }
+    mobRec = null;
+  };
+  mobRec.stop();
 }
