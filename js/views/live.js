@@ -75,6 +75,15 @@ async function connect() {
     setStatus("ENTRE TA CLÉ LIVE D'ABORD");
     return;
   }
+    // iOS unlock: audio context MUST be created+resumed synchronously in the tap
+  if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+  outCtx.resume();
+  const unlockBuf = outCtx.createBuffer(1, 1, 22050);
+  const unlockSrc = outCtx.createBufferSource();
+  unlockSrc.buffer = unlockBuf;
+  unlockSrc.connect(outCtx.destination);
+  unlockSrc.start(0);
+
   const voice = document.getElementById("live-voice").value;
   setStatus("CONNECTING…");
   try {
@@ -98,8 +107,6 @@ async function connect() {
     });
 
     await startMic();
-    if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
-    outCtx.resume();
     connected = true;
     setOrb(true);
     setStatus("● LIVE — parle librement · clique pour couper");
