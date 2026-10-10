@@ -7,6 +7,7 @@ let session = null;
 let connected = false;
 let micStream = null, micCtx = null, processor = null;
 let outCtx = null, nextPlayTime = 0, activeSources = [];
+const BUFFER_TARGET = 0.35;  // deep buffer: absorbs Firefox network jitter
 let aiBubbleEl = null, userBubbleEl = null;
 
 const LIVE_PROMPT = `You are Socrates, the voice tutor inside NEXUS OS, speaking with Rakshit, a Seconde student at CSI Europole Grenoble (British Section, BFI). Subjects: Maths, Physique-Chimie, SES. You are warm, sharp, use analogies, and speak naturally — like a smart friend, not a textbook. Match the user's language (French or English, whichever they use). Keep responses concise (2-5 sentences) unless asked for depth.`;
@@ -178,23 +179,40 @@ function onLiveMessage(msg) {
 /* ---------- audio helpers ---------- */
 
 function playAudio(b64) {
-  if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+  if (!outCtx) {
+    outCtx = new AudioContext({ sampleRate: 24000 });
+  }
   if (outCtx.state === "suspended") outCtx.resume();
+
   const f32 = base64ToFloat32(b64);
   if (!f32.length) return;
-  const buf = outCtx.createBuffer(1, f32.length, 24000);
-  buf.getChannelData(0).set(f32);
+
+  // If Firefox resampled the context (e.g. 48k), linear upsample keeps pitch right
+  const rate = outCtx.sampleRate;
+  let samples = f32;
+  if (rate !== 24000) {
+    const ratio = rate / 24000;
+    samples = new Float32Array(Math.floor(f32.length * ratio));
+    for (let i = 0; i < samples.length; i++) {
+      samples[i] = f32[Math.floor(i / ratio)];
+    }
+  }
+
+  const buf = outCtx.createBuffer(1, samples.length, rate);
+  buf.getChannelData(0).set(samples);
   const src = outCtx.createBufferSource();
   src.buffer = buf;
   src.connect(outCtx.destination);
+
   const now = outCtx.currentTime;
-  if (nextPlayTime < now) nextPlayTime = now + 0.05;
+  // Resync only if we've drifted badly (>1s behind) — otherwise keep schedule
+  if (nextPlayTime < now - 1.0) nextPlayTime = now + BUFFER_TARGET;
+  if (nextPlayTime < now) nextPlayTime = now + 0.02; // tiny catch-up gap, not a jump
   src.start(nextPlayTime);
   nextPlayTime += buf.duration;
   activeSources.push(src);
   src.onended = () => { activeSources = activeSources.filter((s) => s !== src); };
 }
-
 function stopPlayback() {
   activeSources.forEach((s) => { try { s.stop(); } catch (e) {} });
   activeSources = [];
