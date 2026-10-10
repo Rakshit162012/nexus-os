@@ -415,3 +415,23 @@ body {
 /* Hero title glow on hover */
 .nx-hero h1 { transition: text-shadow 0.3s ease; }
 .nx-hero h1:hover { text-shadow: 0 0 24px rgba(255,26,26,0.5); }
+
+/* Chat math rendering */
+.nx-math {
+  font-family: var(--font-mono);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+.nx-inline-math {
+  font-family: var(--font-mono);
+  background: var(--bg-input);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85em;
+  color: var(--accent-secondary);
+}
