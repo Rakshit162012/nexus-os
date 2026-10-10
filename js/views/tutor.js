@@ -102,7 +102,7 @@ function addBubble(role, content, speak) {
       ? "bg-nx-red text-nx-bg font-medium"
       : "nx-card text-nx-text"} max-w-[85%] px-4 py-3 text-sm whitespace-pre-wrap"
       style="border-radius:${isUser ? "14px 14px 4px 14px" : "14px 14px 14px 4px"};line-height:1.6">
-      ${escapeHtml(content)}
+            ${window.mdToHtml(content)}
     </div>`;
   box.appendChild(wrap);
   scrollBottom();
@@ -128,17 +128,23 @@ function toggleTts() {
 function speakText(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const clean = text.replace(/\$\$?.*?\$\$?/g, "").slice(0, 500);
-  const u = new SpeechSynthesisUtterance(clean);
-  u.lang = "fr-FR";
-  u.rate = 1.0;
-  u.pitch = 0.95;
+  const clean = window.cleanForSpeech(text).replace(/\s+/g, " ").trim();
+  const sentences = clean.match(/[^.!?…\n]+[.!?…]+/g) || [clean];
   const voices = window.speechSynthesis.getVoices();
-  const fr = voices.find((v) => v.lang.startsWith("fr"));
-  if (fr) u.voice = fr;
-  window.speechSynthesis.speak(u);
+  const fr =
+    voices.find((v) => v.lang.startsWith("fr") && /Google|Microsoft|Natural|Neural/i.test(v.name)) ||
+    voices.find((v) => v.lang.startsWith("fr")) ||
+    voices[0];
+  sentences.forEach((s, i) => {
+    const u = new SpeechSynthesisUtterance(s.trim());
+    u.lang = "fr-FR";
+    u.rate = 1.03;
+    u.pitch = 1.0;
+    if (fr) u.voice = fr;
+    if (i === sentences.length - 1) u.onend = () => {};
+    window.speechSynthesis.speak(u);
+  });
 }
-
 function voiceInput() {
   window.recordVoice((text) => {
     document.getElementById("chat-input").value = text;
