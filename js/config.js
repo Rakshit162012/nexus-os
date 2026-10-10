@@ -100,4 +100,32 @@
       }, 400);
     }).catch(() => toast("Accès micro refusé — autorise le micro dans Firefox", "error", 4000));
   };
+    // Render markdown-lite + LaTeX for chat bubbles
+  window.mdToHtml = function (text) {
+    const esc = (s) => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
+    let t = esc(text);
+    t = t.replace(/\$\$([\s\S]*?)\$\$/g, '<div class="nx-math">$1</div>');
+    t = t.replace(/\$([^$\n]+)\$/g, '<code class="nx-inline-math">$1</code>');
+    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-nx-cyan font-semibold">$1</strong>');
+    t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    t = t.replace(/`([^`]+)`/g, '<code class="nx-inline-math">$1</code>');
+    t = t.replace(/^### (.*)$/gm, '<div class="font-bold mt-2 mb-1 text-nx-red">$1</div>');
+    t = t.replace(/^- (.*)$/gm, '<div class="pl-3">• $1</div>');
+    t = t.replace(/^\d+\. (.*)$/gm, '<div class="pl-3">$1</div>');
+    return t.replace(/\n/g, "<br>");
+  };
+
+  // Strip markdown/LaTeX so TTS reads clean natural text
+  window.cleanForSpeech = function (text) {
+    return text
+      .replace(/\$\$[\s\S]*?\$\$/g, " une formule mathématique. ")
+      .replace(/\$([^$]+)\$/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*\n]+)\*/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/^#+\s*/gm, "")
+      .replace(/[_~]/g, "")
+      .replace(/\n{2,}/g, ". ")
+      .replace(/\n/g, ", ");
+  };
 })();
