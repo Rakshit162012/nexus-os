@@ -10,6 +10,7 @@ import { renderFlashcards } from "./views/flashcards.js";
 import { renderQuizzes } from "./views/quizzes.js";
 import { renderStudy } from "./views/study.js";
 import { renderQuizTake } from "./views/quiz-take.js";
+import { renderTutor } from "./views/tutor.js";
 
 const routes = {
   dashboard: renderDashboard,
@@ -48,6 +49,8 @@ export async function render() {
       await renderStudy(container, param);
     } else if (view === "quiz" && param) {
       await renderQuizTake(container, param);
+    } else if (view === "tutor") {
+      await renderTutor(container);
     } else if (view === "academics") {
       await renderNotes(container);
     } else {
