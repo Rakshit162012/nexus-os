@@ -190,7 +190,7 @@ function disconnect(silent) {
 
 async function startMobileRecord(e) {
   e.preventDefault();
-  if (!connected) { connect(); return; }
+  if (mobRec) return; // already recording
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mobRec = new MediaRecorder(stream);
@@ -205,24 +205,47 @@ async function startMobileRecord(e) {
 async function stopMobileRecord() {
   if (!mobRec || mobRec.state !== "recording") return;
   document.getElementById("live-orb").style.transform = "";
-  mobRec.onstop = async () => {
-    mobRec.stream.getTracks().forEach((t) => t.stop());
+  const rec = mobRec;
+  mobRec = null;
+  rec.onstop = async () => {
+    rec.stream.getTracks().forEach((t) => t.stop());
     setStatus("TRANSCRIPTION…");
     try {
-      const blob = new Blob(mobChunks, { type: mobRec.mimeType || "audio/webm" });
+      const blob = new Blob(mobChunks, { type: rec.mimeType || "audio/webm" });
       const fd = new FormData();
       fd.append("file", blob, "voice.webm");
       const res = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/transcribe",
         { method: "POST", body: fd });
       const data = await res.json();
-      if (!data.text) { setStatus("Rien entendu — réessaie"); mobRec = null; return; }
+      if (!data.text) { setStatus("Rien entendu — réessaie"); return; }
       makeBubble("user").textContent = data.text;
-      session.send({ text: data.text });
-      setStatus("● LIVE — Socrates répond…");
-    } catch (err) { setStatus("ERREUR: " + err.message); }
-    mobRec = null;
+      scrollDown();
+
+      setStatus("SOCRATES RÉPOND…");
+      const chat = await api("/api/v1/tutor/chat", {
+        method: "POST",
+        body: JSON.stringify({ message: data.text }),
+      });
+      makeBubble("assistant").textContent = chat.reply;
+      scrollDown();
+
+      setStatus("LECTURE…");
+      const sp = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: chat.reply }),
+      });
+      const mp3 = await sp.blob();
+      const url = URL.createObjectURL(mp3);
+      const audio = new Audio(url);
+      audio.onended = () => { URL.revokeObjectURL(url); setStatus("● MAINTIENS l'orb pour parler"); };
+      await audio.play();
+      setStatus("● SOCRATES TE PARLE…");
+    } catch (err) {
+      setStatus("ERREUR: " + err.message);
+    }
   };
-  mobRec.stop();
+  rec.stop();
 }
 
 /* ---------- live messages ---------- */
