@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { id: "flashcards", hash: "#/academics/flashcards", icon: "▤", label: "CARDS", nav: "flashcards" },
   { id: "quizzes", hash: "#/academics/quizzes", icon: "?", label: "QUIZ", nav: "quizzes" },
   { id: "tutor", hash: "#/tutor", icon: "◉", label: "SOCRATES" },
+  { id: "live", hash: "#/live", icon: "◉", label: "LIVE" },
 ];
 
 function renderShell() {
