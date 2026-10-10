@@ -357,3 +357,61 @@ body {
     box-shadow: inset 2px 0 0 var(--accent-primary);
   }
 }
+/* ============================================================
+   DASHBOARD V2 — Cyberpunk Command Center additions
+   ============================================================ */
+
+.nx-hero {
+  background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--border-glow);
+  border-radius: 14px;
+  box-shadow: 0 0 30px rgba(255,26,26,0.12), inset 0 0 60px rgba(255,26,26,0.04);
+}
+
+.nx-glow-border {
+  border-color: var(--border-glow) !important;
+  box-shadow: 0 0 24px rgba(255,26,26,0.15);
+}
+
+/* Skill tree (weakness map) */
+.nx-skilltree { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 8px 0; }
+
+.nx-node-row { display: flex; gap: 24px; justify-content: center; }
+
+.nx-node {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid;
+  position: relative;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.nx-node::before {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
+.nx-node:hover { transform: scale(1.06); }
+
+.nx-node-master { border-color: rgba(0,255,136,0.5); color: var(--success); }
+.nx-node-master::before { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+.nx-node-dev { border-color: rgba(255,170,0,0.5); color: var(--warning); animation: pulseGlow 3s infinite; }
+.nx-node-dev::before { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+.nx-node-struggle { border-color: rgba(255,26,26,0.6); color: var(--accent-primary); animation: pulseGlow 1.8s infinite; }
+.nx-node-struggle::before { background: var(--accent-primary); box-shadow: 0 0 10px var(--accent-primary); }
+
+.nx-node-sm { font-size: 0.58rem; padding: 0.3rem 0.7rem; }
+
+/* Hero title glow on hover */
+.nx-hero h1 { transition: text-shadow 0.3s ease; }
+.nx-hero h1:hover { text-shadow: 0 0 24px rgba(255,26,26,0.5); }
