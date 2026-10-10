@@ -94,6 +94,8 @@ async function connect() {
     });
 
     await startMic();
+    if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+    outCtx.resume();
     connected = true;
     setOrb(true);
     setStatus("● LIVE — parle librement · clique pour couper");
@@ -149,9 +151,11 @@ function onLiveMessage(msg) {
   }
 
   // Model audio → speaker
-  const audio = sc.audioOutput?.audio?.data;
-  if (audio) playAudio(audio);
-
+    const audio = sc.audioOutput?.audio?.data || sc.modelTurn?.parts?.[0]?.inlineData?.data;
+  if (audio) {
+    if (!window._audioSeen) { window._audioSeen = true; setStatus("● LIVE — audio reçu ✓"); }
+    playAudio(audio);
+  }
   // Model transcript → streaming bubble
   if (sc.outputTranscription?.text) {
     if (!aiBubbleEl) aiBubbleEl = makeBubble("assistant");
@@ -172,6 +176,7 @@ function onLiveMessage(msg) {
 
 function playAudio(b64) {
   if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
+  if (outCtx.state === "suspended") outCtx.resume();
   const f32 = base64ToFloat32(b64);
   if (!f32.length) return;
   const buf = outCtx.createBuffer(1, f32.length, 24000);
