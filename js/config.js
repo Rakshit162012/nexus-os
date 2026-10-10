@@ -104,8 +104,6 @@
   window.mdToHtml = function (text) {
     const esc = (s) => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
     let t = esc(text);
-    t = t.replace(/\$\$([\s\S]*?)\$\$/g, '<div class="nx-math">$1</div>');
-    t = t.replace(/\$([^$\n]+)\$/g, '<code class="nx-inline-math">$1</code>');
     t = t.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-nx-cyan font-semibold">$1</strong>');
     t = t.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
     t = t.replace(/`([^`]+)`/g, '<code class="nx-inline-math">$1</code>');
