@@ -140,21 +140,10 @@ function speakText(text) {
 }
 
 function voiceInput() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { toast("Voice non supporté — utilise Chrome", "error"); return; }
-  const rec = new SR();
-  rec.lang = "fr-FR";
-  const btn = document.getElementById("voice-btn");
-  btn.classList.add("recording");
-  toast("🎤 J'écoute...", "info", 2000);
-  rec.onresult = (e) => {
-    document.getElementById("chat-input").value = e.results[0][0].transcript;
-  };
-  rec.onend = () => btn.classList.remove("recording");
-  rec.onerror = () => { btn.classList.remove("recording"); toast("Erreur micro", "error"); };
-  rec.start();
+  window.recordVoice((text) => {
+    document.getElementById("chat-input").value = text;
+  });
 }
-
 async function clearChat() {
   try {
     await api("/api/v1/tutor/history", { method: "DELETE" });
