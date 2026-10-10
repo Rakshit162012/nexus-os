@@ -1,6 +1,7 @@
 /**
  * NEXUS OS — SOCRATES LIVE (Gemini Live API)
- * Desktop Chrome: full duplex voice. Mobile: push-to-talk via Whisper.
+ * Auth: desktop uses key from localStorage · mobile uses backend-minted ephemeral token.
+ * Full duplex everywhere (mic downsample handles iOS/Android rates).
  */
 
 let session = null;
@@ -9,40 +10,41 @@ let connecting = false;
 let micStream = null, micCtx = null, processor = null;
 let outCtx = null, nextPlayTime = 0, activeSources = [];
 let aiBubbleEl = null, userBubbleEl = null;
-let mobRec = null, mobChunks = [];
 const BUFFER_TARGET = 0.35;
 
 const LIVE_PROMPT = `You are Socrates, the voice tutor inside NEXUS OS, speaking with Rakshit, a Seconde student at CSI Europole Grenoble (British Section, BFI). Subjects: Maths, Physique-Chimie, SES. You are warm, sharp, use analogies, and speak naturally — like a smart friend, not a textbook. Match the user's language (French or English, whichever they use). Keep responses concise (2-5 sentences) unless asked for depth.`;
 
 export async function renderLive(container) {
+  const hasKey = !!localStorage.getItem("nexus_live_key");
+  const mobile = isMobileDevice();
+
   container.innerHTML = `
   <div class="max-w-3xl mx-auto px-4 py-6 pb-24 md:pb-10 flex flex-col items-center" style="min-height:80vh">
 
     <div class="text-center mb-6">
       <h1 class="text-2xl font-bold tracking-tight">SOCRATES <span class="text-nx-red">LIVE</span></h1>
-            <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
-      <button id="change-key" class="nx-btn nx-btn-ghost mt-2" style="padding:0.3rem 0.8rem;font-size:0.65rem">🔑 CHANGE KEY</button>
+      <div class="text-nx-text-muted text-xs font-mono">GEMINI 3.8 LIVE · REAL-TIME VOICE · INTERRUPTIBLE</div>
     </div>
-    ${navigator.userAgent.includes("Firefox") && !isMobileDevice() ? `
+
+    ${navigator.userAgent.includes("Firefox") && !mobile ? `
     <div class="nx-card p-3 mb-5 w-full max-w-md text-center" style="border-color:rgba(255,170,0,0.4)">
       <div class="text-nx-amber text-xs font-mono">⚠ Firefox détecté — le mode voix peut grésiller.<br>Utilise <b>Chrome</b> pour une voix parfaite (le chat texte marche partout).</div>
     </div>` : ""}
 
-    <!-- One-time key entry -->
-    <div id="key-gate" class="nx-card p-5 mb-6 w-full max-w-md ${localStorage.getItem("nexus_live_key") ? "hidden" : ""}">
+    ${!mobile ? `
+    <div id="key-gate" class="nx-card p-5 mb-6 w-full max-w-md ${hasKey ? "hidden" : ""}">
       <div class="font-mono text-xs tracking-widest text-nx-amber mb-2">🔑 LIVE API KEY REQUIRED</div>
       <div class="text-nx-text-muted text-xs mb-3">Paste your Gemini Live key once — stored in this browser only.</div>
       <input id="live-key-input" type="password" class="nx-input mb-2" placeholder="AQ....">
       <button id="save-key-btn" class="nx-btn nx-btn-primary w-full">SAVE KEY</button>
-    </div>
+    </div>` : `
+    <div class="text-nx-text-muted text-[10px] font-mono mb-4">📱 mobile · token sécurisé fourni par ton backend</div>`}
 
-    <!-- Voice picker -->
     <select id="live-voice" class="nx-input mb-8" style="width:auto;padding:0.4rem 0.9rem;font-size:0.8rem">
       ${["Puck","Charon","Kore","Fenrir","Aoede","Leda","Orus"].map(v =>
         `<option ${v === "Puck" ? "selected" : ""}>${v}</option>`).join("")}
     </select>
 
-    <!-- Orb -->
     <button id="live-orb" class="relative w-36 h-36 rounded-full mb-6 transition-all"
       style="background:radial-gradient(circle at 35% 35%, #ff4d4d, #b30000 60%, #4d0000);
              box-shadow:0 0 40px rgba(255,26,26,0.4);border:2px solid rgba(255,26,26,0.6)">
@@ -59,24 +61,12 @@ export async function renderLive(container) {
     if (v.length < 20) { toast("Clé trop courte", "error"); return; }
     localStorage.setItem("nexus_live_key", v);
     document.getElementById("key-gate").classList.add("hidden");
-    toast("Clé sauvegardée · se termine par …" + v.slice(-6), "success");
+    toast("Clé sauvegardée · …" + v.slice(-6), "success");
   });
 
-    document.getElementById("change-key")?.addEventListener("click", () => {
-    document.getElementById("key-gate").classList.remove("hidden");
-    window.scrollTo(0, 0);
+  document.getElementById("live-orb").addEventListener("click", () => {
+    connected ? disconnect() : connect();
   });
-  
-  const orb = document.getElementById("live-orb");
-  if (isMobileDevice()) {
-    orb.addEventListener("touchstart", startMobileRecord);
-    orb.addEventListener("touchend", stopMobileRecord);
-    orb.addEventListener("mousedown", startMobileRecord);
-    orb.addEventListener("mouseup", stopMobileRecord);
-    setStatus("Tap orb to connect · then HOLD orb while talking");
-  } else {
-    orb.addEventListener("click", () => { connected ? disconnect() : connect(); });
-  }
   window.addEventListener("hashchange", () => { if (connected) disconnect(); });
 }
 
@@ -91,14 +81,8 @@ function isMobileDevice() {
 async function connect() {
   if (connecting || connected) return;
   connecting = true;
-  const key = localStorage.getItem("nexus_live_key") || "";
-  if (!key) {
-    document.getElementById("key-gate")?.classList.remove("hidden");
-    setStatus("ENTRE TA CLÉ LIVE D'ABORD");
-    return;
-  }
 
-  // iOS unlock: create + resume audio synchronously inside the tap
+  // Audio unlock synchronously in the tap (iOS requirement)
   if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
   outCtx.resume();
   const unlockBuf = outCtx.createBuffer(1, 1, 22050);
@@ -107,7 +91,29 @@ async function connect() {
   unlockSrc.connect(outCtx.destination);
   unlockSrc.start(0);
 
-  const voice = document.getElementById("live-voice").value;
+  // Resolve credentials: mobile -> backend token · desktop -> localStorage key
+  let key = "";
+  if (isMobileDevice()) {
+    setStatus("TOKEN SÉCURISÉ…");
+    try {
+      const t = await api("/api/v1/voice/live/token", { method: "POST" });
+      key = t.name;
+    } catch (e) {
+      connecting = false;
+      setStatus("TOKEN: " + e.message);
+      return;
+    }
+  } else {
+    key = localStorage.getItem("nexus_live_key") || "";
+    if (!key) {
+      connecting = false;
+      document.getElementById("key-gate")?.classList.remove("hidden");
+      setStatus("ENTRE TA CLÉ LIVE D'ABORD");
+      return;
+    }
+  }
+
+  const voice = document.getElementById("live-voice")?.value || "Puck";
   setStatus("CONNECTING…");
   try {
     const { GoogleGenAI, Modality } = await import("https://esm.run/@google/genai@1.16.0");
@@ -125,29 +131,24 @@ async function connect() {
       callbacks: {
         onmessage: onLiveMessage,
         onerror: (e) => setStatus("ERROR: " + (e?.message || JSON.stringify(e)).slice(0, 80)),
-                        onclose: (e) => {
+        onclose: (e) => {
           connecting = false;
           if (connected) disconnect(true);
-          setStatus("CLOSED code=" + (e?.code ?? "?") + " reason=" + (e?.reason || "none").slice(0, 60));
+          setStatus("CLOSED code=" + (e?.code ?? "?") + " reason=" + (e?.reason || "none").slice(0, 50));
         },
       },
     });
 
-    if (isMobileDevice()) {
-      connected = true;
-      setOrb(true);
-      setStatus("● LIVE — MAINTIENS l'orb pour parler");
-    } else {
-      await startMic();
-      connected = true;
-      setOrb(true);
-      setStatus("● LIVE — parle librement · clique pour couper");
-    }
-    } catch (e) {
+    await startMic();
+    connected = true;
+    connecting = false;
+    setOrb(true);
+    setStatus("● LIVE — parle librement · clique pour couper");
+  } catch (e) {
+    connecting = false;
     setStatus("CONNEXION ÉCHOUÉE: " + e.message);
     toast("Live: " + e.message, "error", 5000);
   }
-  connecting = false;
 }
 
 async function startMic() {
@@ -173,79 +174,17 @@ async function startMic() {
 
 function disconnect(silent) {
   connected = false;
+  connecting = false;
   try { session?.close(); } catch (e) {}
   session = null;
   micStream?.getTracks().forEach((t) => t.stop());
   micCtx?.close().catch(() => {});
   processor = null;
-  try { if (mobRec && mobRec.state === "recording") mobRec.stop(); } catch (e) {}
   stopPlayback();
   setOrb(false);
   setStatus(silent ? "SESSION TERMINÉE" : "DÉCONNECTÉ · tape pour relancer");
   aiBubbleEl = null;
   userBubbleEl = null;
-}
-
-/* ---------- mobile push-to-talk ---------- */
-
-async function startMobileRecord(e) {
-  e.preventDefault();
-  if (mobRec) return; // already recording
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mobRec = new MediaRecorder(stream);
-    mobChunks = [];
-    mobRec.ondataavailable = (ev) => mobChunks.push(ev.data);
-    mobRec.start();
-    document.getElementById("live-orb").style.transform = "scale(1.15)";
-    setStatus("● ENREGISTREMENT… relâche pour envoyer");
-  } catch (err) { setStatus("MIC: " + err.message); }
-}
-
-async function stopMobileRecord() {
-  if (!mobRec || mobRec.state !== "recording") return;
-  document.getElementById("live-orb").style.transform = "";
-  const rec = mobRec;
-  mobRec = null;
-  rec.onstop = async () => {
-    rec.stream.getTracks().forEach((t) => t.stop());
-    setStatus("TRANSCRIPTION…");
-    try {
-      const blob = new Blob(mobChunks, { type: rec.mimeType || "audio/webm" });
-      const fd = new FormData();
-      fd.append("file", blob, "voice.webm");
-      const res = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/transcribe",
-        { method: "POST", body: fd });
-      const data = await res.json();
-      if (!data.text) { setStatus("Rien entendu — réessaie"); return; }
-      makeBubble("user").textContent = data.text;
-      scrollDown();
-
-      setStatus("SOCRATES RÉPOND…");
-      const chat = await api("/api/v1/tutor/chat", {
-        method: "POST",
-        body: JSON.stringify({ message: data.text }),
-      });
-      makeBubble("assistant").textContent = chat.reply;
-      scrollDown();
-
-      setStatus("LECTURE…");
-      const sp = await fetch(window.APP_CONFIG.BACKEND_URL + "/api/v1/voice/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: chat.reply }),
-      });
-      const mp3 = await sp.blob();
-      const url = URL.createObjectURL(mp3);
-      const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); setStatus("● MAINTIENS l'orb pour parler"); };
-      await audio.play();
-      setStatus("● SOCRATES TE PARLE…");
-    } catch (err) {
-      setStatus("ERREUR: " + err.message);
-    }
-  };
-  rec.stop();
 }
 
 /* ---------- live messages ---------- */
