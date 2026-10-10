@@ -72,48 +72,17 @@ function renderShell() {
 
 function setupVoice() {
   return () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      toast("Voice non supporté sur ce navigateur — utilise Chrome", "error", 4000);
-      return;
-    }
-    const rec = new SR();
-    rec.lang = "fr-FR";
-    rec.interimResults = false;
-
-    const btns = [
-      document.getElementById("mic-btn-mobile"),
-      document.getElementById("mic-btn-desktop"),
-    ].filter(Boolean);
-    btns.forEach((b) => b.classList.add("recording"));
-    toast("🎤 J'écoute...", "info", 2000);
-
-    rec.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      // If on dashboard, fill quick capture; otherwise save and go
+    window.recordVoice((text) => {
       const qc = document.getElementById("qc-text");
-      if (qc) {
-        qc.value = text;
-        toast("Transcription ajoutée au Quick Capture", "success");
-      } else {
+      if (qc) { qc.value = text; toast("Transcription ajoutée au Quick Capture", "success"); }
+      else {
         sessionStorage.setItem("voice-draft", text);
         location.hash = "/dashboard";
-        setTimeout(() => {
-          const el = document.getElementById("qc-text");
-          if (el) el.value = text;
-        }, 400);
-        toast("Transcription ajoutée", "success");
+        setTimeout(() => { const el = document.getElementById("qc-text"); if (el) el.value = text; }, 400);
       }
-    };
-    rec.onend = () => btns.forEach((b) => b.classList.remove("recording"));
-    rec.onerror = () => {
-      btns.forEach((b) => b.classList.remove("recording"));
-      toast("Erreur micro", "error");
-    };
-    rec.start();
+    });
   };
 }
-
 // ===== BOOT =====
 renderShell();
 initRouter();
