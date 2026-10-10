@@ -117,7 +117,10 @@ async function connect() {
       callbacks: {
         onmessage: onLiveMessage,
         onerror: (e) => setStatus("ERROR: " + (e?.message || JSON.stringify(e)).slice(0, 80)),
-        onclose: () => { if (connected) disconnect(true); },
+                onclose: (e) => {
+          if (connected) disconnect(true);
+          setStatus("CLOSED code=" + (e?.code ?? "?") + " reason=" + (e?.reason || "none").slice(0, 60));
+        },
       },
     });
 
