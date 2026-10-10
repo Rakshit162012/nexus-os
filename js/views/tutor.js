@@ -105,6 +105,15 @@ function addBubble(role, content, speak) {
             ${window.mdToHtml(content)}
     </div>`;
   box.appendChild(wrap);
+    if (window.renderMathInElement) {
+    renderMathInElement(wrap, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+      ],
+      throwOnError: false,
+    });
+  }
   scrollBottom();
   if (!isUser && speak) speakText(content);
 }
