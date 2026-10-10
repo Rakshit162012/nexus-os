@@ -16,6 +16,8 @@
     APP_NAME: "NEXUS OS",
     VERSION: "2.0.0",
     USER_NAME: "Rakshit",
+    LIVE_KEY: localStorage.getItem("nexus_live_key") || "",
+    LIVE_MODEL: "gemini-3.8-live",
     SUBJECTS: [
       { code: "maths", name: "Mathématiques" },
       { code: "physique-chimie", name: "Physique-Chimie" },
