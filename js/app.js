@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: "academics", hash: "#/academics", icon: "✎", label: "NOTES" },
   { id: "flashcards", hash: "#/academics/flashcards", icon: "▤", label: "CARDS", nav: "flashcards" },
   { id: "quizzes", hash: "#/academics/quizzes", icon: "?", label: "QUIZ", nav: "quizzes" },
+  { id: "tutor", hash: "#/tutor", icon: "◉", label: "SOCRATES" },
 ];
 
 function renderShell() {
