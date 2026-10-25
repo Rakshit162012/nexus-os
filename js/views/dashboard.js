@@ -164,19 +164,7 @@ export async function renderDashboard(container) {
             <span><span class="dot" style="background:var(--accent-primary)"></span> Struggling</span>
           </span>
         </div>
-        <div class="nx-skilltree">
-          <div class="nx-node nx-node-master">MECHANICS</div>
-          <div class="nx-node-row">
-            <div class="nx-node nx-node-master">KINEMATICS</div>
-            <div class="nx-node nx-node-struggle">DYNAMICS</div>
-          </div>
-          <div class="nx-node-row">
-            <div class="nx-node nx-node-master nx-node-sm">Forces</div>
-            <div class="nx-node nx-node-dev nx-node-sm">Momentum</div>
-            <div class="nx-node nx-node-struggle nx-node-sm">Energy</div>
-            <div class="nx-node nx-node-dev nx-node-sm">Rotation</div>
-          </div>
-        </div>
+        <div id="weakness-real" class="space-y-2 text-xs"></div>
         <div class="text-nx-text-muted text-[10px] mt-3 font-mono">Demo tree — populates from quiz weaknesses as you complete quizzes.</div>
       </div>
 
@@ -203,6 +191,36 @@ export async function renderDashboard(container) {
   </div>`;
 
   document.getElementById("qc-submit").addEventListener("click", submitTranscript);
+}
+
+  renderWeaknesses();
+
+async function renderWeaknesses() {
+  try {
+    const data = await api("/api/v1/tutor/weaknesses");
+    const box = document.getElementById("weakness-real");
+    if (!box) return;
+    const concepts = data.concepts || [];
+    if (concepts.length === 0) {
+      box.innerHTML = `<div class="text-nx-text-muted font-mono text-[10px]">Complete a quiz to grow your weakness map.</div>`;
+      return;
+    }
+    box.innerHTML = concepts.slice(0, 6).map((c) => {
+      const m = c.mastery;
+      const cls = m >= 80 ? "nx-node-master" : m >= 50 ? "nx-node-dev" : "nx-node-struggle";
+      const color = m >= 80 ? "green" : m >= 50 ? "" : "";
+      return `
+        <div>
+          <div class="flex justify-between mb-1">
+            <span class="${m < 50 ? "text-nx-red" : m < 80 ? "text-nx-amber" : "text-nx-green"} font-mono">${escapeHtml(c.concept)}</span>
+            <span class="font-mono text-nx-text-sec">${m}%</span>
+          </div>
+          <div class="nx-progress">
+            <div class="nx-progress-fill ${m >= 80 ? "green" : m >= 50 ? "" : ""}" style="width:${m}%"></div>
+          </div>
+        </div>`;
+    }).join("");
+  } catch (e) { console.error("weaknesses:", e); }
 }
 
 /* ---------- helpers (unchanged logic) ---------- */
